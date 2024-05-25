@@ -13,6 +13,6 @@ jobs:
       - name: Install Dependenices
         run: npm ci
       - name: reun tests
-        run: npm tests
+        run: npm test
 
       

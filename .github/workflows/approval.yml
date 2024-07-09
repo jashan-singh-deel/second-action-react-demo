@@ -22,7 +22,8 @@ jobs:
       - name: Check required approvals
         uses: weetbix/required-approvals-action@v2.1.1
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          required: 2
-          paths: |
-            src/**/*
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          requirements: |
+            - patterns:
+                - "src/**/*"
+              requiredApprovals: 2

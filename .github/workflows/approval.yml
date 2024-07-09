@@ -1,0 +1,28 @@
+name: Approval Checks for Playground
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/**/*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-approvals:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check required approvals
+        uses: weetbix/required-approvals-action@v2.1.1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          required: 2
+          paths: |
+            src/**/*

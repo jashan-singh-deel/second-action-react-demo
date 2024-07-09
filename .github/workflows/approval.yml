@@ -28,4 +28,4 @@ jobs:
             - patterns:
                 - "/src/**/*"
               requiredApprovals: 0
-          github-token: ${{ secrets.APPROVAL_GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

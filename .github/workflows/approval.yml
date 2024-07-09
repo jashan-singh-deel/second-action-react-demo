@@ -9,9 +9,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
   checks: write
-  pull-requests: write
+  pull-requests: read
 
 jobs:
   check-approvals:

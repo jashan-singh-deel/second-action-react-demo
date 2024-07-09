@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Check required approvals
-        uses: weetbix/required-approvals-action@v1.0.6
+        uses: Weetbix/configurable-required-approvals@v1.0.6
         with:
           github-token: ${{ secrets.APPROVAL_GITHUB_TOKEN }}
           requirements: |

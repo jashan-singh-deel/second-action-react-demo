@@ -22,8 +22,8 @@ jobs:
       - name: Check required approvals
         uses: Weetbix/configurable-required-approvals@v1.0.6
         with:
-          github-token: ${{ secrets.APPROVAL_GITHUB_TOKEN }}
           requirements: |
             - patterns:
                 - "src/**/*"
               requiredApprovals: 2
+          github-token: ${{ secrets.APPROVAL_GITHUB_TOKEN }}

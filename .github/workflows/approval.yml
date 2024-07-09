@@ -1,4 +1,4 @@
-name: Approval Checks for Playground
+name: Required Approvals
 on:
   pull_request:
   pull_request_review:

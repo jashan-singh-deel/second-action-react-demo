@@ -19,10 +19,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Configurable Required Approvals
+      - name: Check required approvals
         uses: Weetbix/configurable-required-approvals@v1.0.6
         with:
-          GITHUB_TOKEN: ${{ secrets.APPROVAL_GITHUB_TOKEN }}
-          required: 2
-          paths: |
-            src/**/*
+          requirements: |
+            - patterns:
+                - "src/**/*"
+              requiredApprovals: 2
+          github-token: ${{ secrets.APPROVAL_GITHUB_TOKEN }}

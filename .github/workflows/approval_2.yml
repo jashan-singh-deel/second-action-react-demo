@@ -12,11 +12,11 @@ on:
       directory:
         description: 'Directory to check for changes'
         required: true
-        default: 'src'
+        default: 'src/**/*'
       required-approvals:
         description: 'Number of required approvals'
         required: true
-        default: 4
+        default: 1
 
 permissions:
   contents: read
@@ -26,6 +26,9 @@ permissions:
 jobs:
   check-approvals:
     runs-on: ubuntu-latest
+    env:
+      DIRECTORY: ${{ github.event.inputs.directory || 'src/**/*' }}
+      REQUIRED_APPROVALS: ${{ github.event.inputs['required-approvals'] || 1 }}
 
     steps:
       - name: Checkout code
@@ -34,8 +37,9 @@ jobs:
       - name: Get list of files changed in the PR
         id: changed_files
         run: |
-          dir="${{ github.event.inputs.directory || 'src' }}"
-          echo "::set-output name=files::$(jq -r --arg dir "$dir" '.[] | select(.filename | startswith($dir)) | .filename' <(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files))"
+          files=$(jq -r --arg dir "$DIRECTORY" '.[] | select(.filename | test($dir)) | .filename' <(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files))
+          echo "Files changed in PR: $files"
+          echo "::set-output name=files::$files"
 
       - name: Check if changes are in specified directory
         id: check_changes
@@ -52,7 +56,9 @@ jobs:
         if: steps.check_changes.outputs.changes_in_directory == 'true'
         id: get_reviews
         run: |
-          echo "::set-output name=reviews::$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews)"
+          reviews=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews)
+          echo "Reviews: $reviews"
+          echo "::set-output name=reviews::$reviews"
 
       - name: Count approvals
         if: steps.check_changes.outputs.changes_in_directory == 'true'
@@ -64,8 +70,9 @@ jobs:
 
       - name: Check required approvals
         if: steps.check_changes.outputs.changes_in_directory == 'true'
+        id: check_required_approvals
         run: |
-          required_approvals="${{ github.event.inputs['required-approvals'] || 4 }}"
+          required_approvals="${{ env.REQUIRED_APPROVALS }}"
           if [ ${{ steps.count_approvals.outputs.approvals }} -lt $required_approvals ]; then
             echo "Required approvals not met. Approvals: ${{ steps.count_approvals.outputs.approvals }}"
             exit 1
@@ -73,6 +80,25 @@ jobs:
             echo "Required approvals met. Approvals: ${{ steps.count_approvals.outputs.approvals }}"
           fi
 
-      - name: Set status to success if no changes in specified directory
+      - name: Set status check to success if no changes in specified directory
         if: steps.check_changes.outputs.changes_in_directory == 'false'
-        run: echo "No changes in specified directory. No approvals required."
+        run: |
+          curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -d '{"state": "success", "context": "Required Approvals", "description": "No changes in specified directory. No approvals required."}' \
+          https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}
+
+      - name: Set status check based on required approvals
+        if: steps.check_changes.outputs.changes_in_directory == 'true'
+        run: |
+          required_approvals="${{ env.REQUIRED_APPROVALS }}"
+          if [ ${{ steps.count_approvals.outputs.approvals }} -lt $required_approvals ]; then
+            curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d '{"state": "failure", "context": "Required Approvals", "description": "Required approvals not met. Approvals: '"${{ steps.count_approvals.outputs.approvals }}"'"}' \
+            https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}
+          else
+            curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d '{"state": "success", "context": "Required Approvals", "description": "Required approvals met. Approvals: '"${{ steps.count_approvals.outputs.approvals }}"'"}' \
+            https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}

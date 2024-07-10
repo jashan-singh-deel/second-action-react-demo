@@ -1,8 +1,11 @@
 name: Required Approvals
 on:
   pull_request:
+    branches:
+      - main
   pull_request_review:
-
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -14,12 +17,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Check required approvals
-        uses: Weetbix/configurable-required-approvals@v2.1.1
+        uses: Weetbix/configurable-required-approvals@v2.1.0
         with:
           requirements: |
             - patterns:
-                - "/src/**/*"
+                - "src/**/*"
               requiredApprovals: 1
           github-token: ${{ secrets.GITHUB_TOKEN }}
-

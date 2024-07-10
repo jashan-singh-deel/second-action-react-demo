@@ -1,0 +1,78 @@
+name: Required Approvals
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, edited, review_requested, review_request_removed, ready_for_review, reopened]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+  workflow_dispatch:
+    inputs:
+      directory:
+        description: 'Directory to check for changes'
+        required: true
+        default: 'src'
+      required-approvals:
+        description: 'Number of required approvals'
+        required: true
+        default: 4
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  check-approvals:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Get list of files changed in the PR
+        id: changed_files
+        run: |
+          dir="${{ github.event.inputs.directory || 'src' }}"
+          echo "::set-output name=files::$(jq -r --arg dir "$dir" '.[] | select(.filename | startswith($dir)) | .filename' <(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files))"
+
+      - name: Check if changes are in specified directory
+        id: check_changes
+        run: |
+          if [ -z "${{ steps.changed_files.outputs.files }}" ]; then
+            echo "No changes in specified directory"
+            echo "::set-output name=changes_in_directory::false"
+          else
+            echo "Changes detected in specified directory"
+            echo "::set-output name=changes_in_directory::true"
+          fi
+
+      - name: Get pull request reviews
+        if: steps.check_changes.outputs.changes_in_directory == 'true'
+        id: get_reviews
+        run: |
+          echo "::set-output name=reviews::$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews)"
+
+      - name: Count approvals
+        if: steps.check_changes.outputs.changes_in_directory == 'true'
+        id: count_approvals
+        run: |
+          approvals=$(echo ${{ steps.get_reviews.outputs.reviews }} | jq -r '[.[] | select(.state=="APPROVED")] | length')
+          echo "Number of approvals: $approvals"
+          echo "::set-output name=approvals::$approvals"
+
+      - name: Check required approvals
+        if: steps.check_changes.outputs.changes_in_directory == 'true'
+        run: |
+          required_approvals="${{ github.event.inputs['required-approvals'] || 4 }}"
+          if [ ${{ steps.count_approvals.outputs.approvals }} -lt $required_approvals ]; then
+            echo "Required approvals not met. Approvals: ${{ steps.count_approvals.outputs.approvals }}"
+            exit 1
+          else
+            echo "Required approvals met. Approvals: ${{ steps.count_approvals.outputs.approvals }}"
+          fi
+
+      - name: Set status to success if no changes in specified directory
+        if: steps.check_changes.outputs.changes_in_directory == 'false'
+        run: echo "No changes in specified directory. No approvals required."

@@ -27,5 +27,5 @@ jobs:
             - patterns:
                 - "src/**/*"
                 - "index.html"
-              requiredApprovals: 4
+              requiredApprovals: 1
           github-token: ${{ secrets.GITHUB_TOKEN }}

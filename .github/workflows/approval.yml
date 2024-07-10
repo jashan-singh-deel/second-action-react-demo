@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Check required approvals
-        uses: Weetbix/configurable-required-approvals@v2.1.0
+        uses: Weetbix/configurable-required-approvals@v1.0.4
         with:
           requirements: |
             - patterns:

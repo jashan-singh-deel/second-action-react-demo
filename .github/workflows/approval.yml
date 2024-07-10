@@ -28,4 +28,4 @@ jobs:
                 - "src/**/*"
                 - "index.html"
               requiredApprovals: 1
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.APPROVAL_GITHUB_TOKEN }}
